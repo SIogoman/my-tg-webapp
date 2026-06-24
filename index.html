@@ -2,553 +2,57 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Учет Доходов</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учет смен</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --tg-theme-bg-color: #ffffff;
-            --tg-theme-text-color: #000000;
-            --tg-theme-hint-color: #999999;
-            --tg-theme-button-color: #2481cc;
-            --tg-theme-button-text-color: #ffffff;
-            --tg-theme-secondary-bg-color: #f1f3f5;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--tg-theme-bg-color, #fff);
-            color: var(--tg-theme-text-color, #000);
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            padding-bottom: 75px;
-        }
-
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .container {
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .banner {
-            width: 100%;
-            height: 140px;
-            background-image: linear-gradient(to bottom, rgba(0,0,0,0.1), var(--tg-theme-bg-color, #fff)), 
-                              url('https://images.unsplash.com/photo-1511919884226-fd3cad34687c?q=80&w=600&auto=format&fit=crop');
-            background-size: cover;
-            background-position: center;
-        }
-
-        /* Карточки статистики */
-        .stats-card {
-            background: linear-gradient(135deg, var(--tg-theme-secondary-bg-color, #f1f3f5) 0%, rgba(36, 129, 204, 0.05) 100%);
-            padding: 16px;
-            border-radius: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-        }
-
-        .stats-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .stats-value {
-            font-size: 24px;
-            font-weight: 800;
-            color: var(--tg-theme-button-color, #2481cc);
-            letter-spacing: -0.5px;
-        }
-
-        /* Прогресс-бары */
-        .progress-container {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .progress-bar-bg {
-            width: 100%;
-            height: 10px;
-            background-color: rgba(0, 0, 0, 0.06);
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #34c759, #2ed573);
-            border-radius: 6px;
-            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .money-goal-container {
-            border-top: 1px solid rgba(0, 0, 0, 0.05);
-            padding-top: 12px;
-            margin-top: 4px;
-        }
-
-        .goal-clickable {
-            background: rgba(36, 129, 204, 0.1);
-            padding: 2px 8px;
-            border-radius: 8px;
-            color: var(--tg-theme-button-color, #2481cc);
-            font-weight: 700;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .goal-clickable:active {
-            background: rgba(36, 129, 204, 0.2);
-        }
-
-        /* Красивые Поля ввода */
-        .input-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        label {
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0.8;
-            padding-left: 4px;
-        }
-
-        .input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        input {
-            -webkit-appearance: none;
-            appearance: none;
-            font-size: 16px;
-            width: 100%;
-            padding: 14px 16px;
-            border: 1.5px solid transparent;
-            border-radius: 16px;
-            background-color: var(--tg-theme-secondary-bg-color, #f1f3f5);
-            color: var(--tg-theme-text-color, #000);
-            outline: none;
-            box-sizing: border-box;
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-
-        input:focus {
-            background-color: var(--tg-theme-bg-color, #fff);
-            border-color: var(--tg-theme-button-color, #2481cc);
-            box-shadow: 0 4px 12px rgba(36, 129, 204, 0.1);
-        }
-
-        /* Приятная Кнопка */
-        button.main-btn {
-            font-size: 16px;
-            font-weight: 700;
-            padding: 16px;
-            border: none;
-            border-radius: 16px;
-            background: linear-gradient(135deg, var(--tg-theme-button-color, #2481cc) 0%, #1a6fa8 100%);
-            color: var(--tg-theme-button-text-color, #fff);
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(36, 129, 204, 0.3);
-            transition: all 0.15s ease;
-        }
-
-        button.main-btn:active {
-            transform: scale(0.98);
-            box-shadow: 0 2px 6px rgba(36, 129, 204, 0.2);
-            opacity: 0.95;
-        }
-
-        /* История смен */
-        .history-section {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 5px;
-        }
-
-        .history-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 16px;
-            border-radius: 16px;
-            background-color: var(--tg-theme-secondary-bg-color, #f1f3f5);
-            font-size: 14px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.01);
-        }
-
-        .history-date {
-            font-weight: 600;
-            opacity: 0.5;
-        }
-
-        .history-profit {
-            font-weight: 700;
-            color: #34c759;
-        }
-
-        /* КАЛЕНДАРЬ */
-        .calendar-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: 700;
-            font-size: 18px;
-            padding: 0 4px;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            padding: 20px;
             text-align: center;
         }
-
-        .weekday {
-            font-size: 12px;
-            font-weight: 600;
-            opacity: 0.5;
-            padding-bottom: 4px;
-        }
-
-        .day {
-            aspect-ratio: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 12px;
-            background-color: var(--tg-theme-secondary-bg-color, #f1f3f5);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-
-        .day.empty {
-            background-color: transparent;
-            cursor: default;
-        }
-
-        .day.work {
-            background: linear-gradient(135deg, #e3fcef 0%, #c6f6d5 100%);
-            color: #14532d;
-        }
-        .day.work::after {
-            content: '💼';
-            font-size: 8px;
-            position: absolute;
-            bottom: 2px;
-        }
-
-        .day.off {
-            background: linear-gradient(135deg, #ffe3e3 0%, #ffd2d2 100%);
-            color: #721c24;
-        }
-        .day.off::after {
-            content: '🌴';
-            font-size: 8px;
-            position: absolute;
-            bottom: 2px;
-        }
-
-        /* Нижнее меню */
-        .tab-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 65px;
-            background-color: var(--tg-theme-bg-color, #fff);
-            border-top: 1px solid rgba(0,0,0,0.08);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 100;
-        }
-
-        .tab-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            background: none;
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
             border: none;
-            color: var(--tg-theme-hint-color, #999);
-            font-size: 11px;
-            font-weight: 600;
+            font-size: 16px;
+        }
+        input {
+            background-color: #333;
+            color: #fff;
+        }
+        button {
+            background-color: #0088cc;
+            color: white;
+            font-weight: bold;
             cursor: pointer;
-            width: 50%;
-            height: 100%;
-            justify-content: center;
         }
-
-        .tab-btn.active {
-            color: var(--tg-theme-button-color, #2481cc);
-        }
-
-        .tab-icon {
-            font-size: 20px;
+        button:hover {
+            background-color: #006699;
         }
     </style>
 </head>
 <body>
 
-    <!-- ВКЛАДКА 1: УЧЕТ -->
-    <div id="page-uchet" class="page active">
-        <div class="banner"></div>
-        <div class="container">
-            <div class="stats-card">
-                <!-- Строка смен -->
-                <div class="stats-row">
-                    <div>
-                        <div style="font-size: 13px; opacity: 0.6; font-weight: 500;">Чистый заработок</div>
-                        <div class="stats-value" id="total-earned">0 ₴</div>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-size: 13px; opacity: 0.6; font-weight: 500;">Цель смен</div>
-                        <div id="goal-ratio" style="font-weight: 700; font-size: 16px;">0 / 30</div>
-                    </div>
-                </div>
-                <div class="progress-container">
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" id="progress-fill"></div>
-                    </div>
-                    <div class="stats-row" style="font-size: 12px; opacity: 0.5; font-weight: 600;">
-                        <span>Прогресс смен</span>
-                        <span id="progress-percent">0%</span>
-                    </div>
-                </div>
-
-                <!-- НОВАЯ ШКАЛА: Финансовая цель -->
-                <div class="progress-container money-goal-container">
-                    <div class="stats-row" style="margin-bottom: 4px;">
-                        <span style="font-size: 13px; opacity: 0.6; font-weight: 500;">Финансовая цель</span>
-                        <span style="font-size: 13px; font-weight: 600;">
-                            <span id="money-current">0</span> / <span id="money-target" class="goal-clickable" title="Нажмите, чтобы изменить">10000</span> ₴
-                        </span>
-                    </div>
-                    <div class="progress-bar-bg" style="height: 12px; background-color: rgba(0,0,0,0.06);">
-                        <div class="progress-bar-fill" id="money-progress-fill" style="background: linear-gradient(90deg, #2481cc, #00d2ff);"></div>
-                    </div>
-                    <div class="stats-row" style="font-size: 12px; opacity: 0.5; font-weight: 600; margin-top: 2px;">
-                        <span>Заполнение шкалы</span>
-                        <span id="money-percent">0%</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Заработано за день (Грязными)</label>
-                <div class="input-wrapper">
-                    <input type="number" id="income" placeholder="0" inputmode="numeric">
-                </div>
-            </div>
-
-            <div class="input-group">
-                <label>Заправка (Расход)</label>
-                <div class="input-wrapper">
-                    <input type="number" id="fuel" placeholder="0" inputmode="numeric">
-                </div>
-            </div>
-
-            <button id="send-btn" class="main-btn">Сохранить смену</button>
-
-            <div class="history-section">
-                <label>Последние смены</label>
-                <div id="history-list"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ВКЛАДКА 2: КАЛЕНДАРЬ -->
-    <div id="page-calendar" class="page">
-        <div class="container" style="margin-top: 16px;">
-            <div class="stats-card">
-                <div class="calendar-header">
-                    <span id="month-title">Июнь 2026</span>
-                </div>
-                
-                <div class="calendar-grid" id="calendar-days"></div>
-            </div>
-            <div style="font-size: 12px; opacity: 0.5; text-align: center; font-weight: 500; padding: 0 10px;">
-                💡 Нажмите на любой день, чтобы переключить его статус вручную (Рабочий / Выходной / Обычный).
-            </div>
-        </div>
-    </div>
-
-    <!-- НИЖНИЙ ТАБ-БАР -->
-    <div class="tab-bar">
-        <button class="tab-btn active" onclick="switchPage('uchet')">
-            <span class="tab-icon">📊</span>
-            <span>Учет</span>
-        </button>
-        <button class="tab-btn" onclick="switchPage('calendar')">
-            <span class="tab-icon">📅</span>
-            <span>Календарь</span>
-        </button>
-    </div>
+    <h2>Учет доходов</h2>
+    
+    <input type="number" id="income" placeholder="Грязный доход">
+    <input type="number" id="fuel" placeholder="Заправка">
+    
+    <button id="send-btn">Сохранить смену</button>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на весь экран
 
-        const GOAL_SHIFTS = 30;
-
-        // Память данных
-        let historyData = JSON.parse(localStorage.getItem('shift_history')) || [];
-        let calendarStatuses = JSON.parse(localStorage.getItem('calendar_statuses')) || {};
-        let moneyTarget = parseFloat(localStorage.getItem('money_target')) || 10000; // Дефолтная финансовая цель
-
-        // Переключение вкладок
-        function switchPage(pageId) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            
-            document.getElementById(`page-${pageId}`).classList.add('active');
-            event.currentTarget.classList.add('active');
-
-            if(pageId === 'calendar') {
-                renderCalendar();
-            }
-        }
-
-        // Обновление главного экрана и всех шкал
-        function updateUI() {
-            const total = historyData.reduce((sum, item) => sum + item.profit, 0);
-            document.getElementById('total-earned').innerText = `${total} ₴`;
-            document.getElementById('money-current').innerText = total;
-
-            // 1. Прогресс-бар СМЕН
-            const shiftsCount = historyData.length;
-            document.getElementById('goal-ratio').innerText = `${shiftsCount} / ${GOAL_SHIFTS}`;
-            const percentShifts = Math.min(Math.round((shiftsCount / GOAL_SHIFTS) * 100), 100);
-            document.getElementById('progress-fill').style.width = `${percentShifts}%`;
-            document.getElementById('progress-percent').innerText = `${percentShifts}%`;
-
-            // 2. Новая шкала ФИНАНСОВОЙ ЦЕЛИ
-            document.getElementById('money-target').innerText = moneyTarget;
-            const percentMoney = Math.min(Math.round((total / moneyTarget) * 100), 100);
-            document.getElementById('money-progress-fill').style.width = `${percentMoney}%`;
-            document.getElementById('money-percent').innerText = `${percentMoney}%`;
-
-            // Рендер истории
-            const historyListEl = document.getElementById('history-list');
-            historyListEl.innerHTML = '';
-            
-            if (historyData.length === 0) {
-                historyListEl.innerHTML = '<div class="history-item" style="opacity:0.5; justify-content:center;">История пуста</div>';
-            } else {
-                historyData.slice(-4).reverse().forEach(item => {
-                    const div = document.createElement('div');
-                    div.className = 'history-item';
-                    div.innerHTML = `
-                        <span class="history-date">${item.date}</span>
-                        <span style="opacity: 0.8;">грязными: ${item.income} | газ: ${item.fuel}</span>
-                        <span class="history-profit">+${item.profit} ₴</span>
-                    `;
-                    historyListEl.appendChild(div);
-                });
-            }
-        }
-
-        // Клик по числу цели вызывает окно для ввода новой суммы
-        document.getElementById('money-target').addEventListener('click', () => {
-            const newTarget = prompt("Укажите новую финансовую цель (сумма в ₴):", moneyTarget);
-            if (newTarget !== null && !isNaN(parseFloat(newTarget)) && parseFloat(newTarget) > 0) {
-                moneyTarget = parseFloat(newTarget);
-                localStorage.setItem('money_target', moneyTarget);
-                updateUI();
-            }
-        });
-
-        // Генерация Календаря
-        function renderCalendar() {
-            const grid = document.getElementById('calendar-days');
-            grid.innerHTML = '';
-
-            const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-            weekdays.forEach(wd => {
-                const div = document.createElement('div');
-                div.className = 'weekday';
-                div.innerText = wd;
-                grid.appendChild(div);
-            });
-
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-
-            const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
-            document.getElementById('month-title').innerText = `${monthNames[month]} ${year}`;
-
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const startingSpaces = firstDay === 0 ? 6 : firstDay - 1;
-
-            for (let i = 0; i < startingSpaces; i++) {
-                const emptyDiv = document.createElement('div');
-                emptyDiv.className = 'day empty';
-                grid.appendChild(emptyDiv);
-            }
-
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dayDiv = document.createElement('div');
-                dayDiv.className = 'day';
-                dayDiv.innerText = d;
-
-                const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-
-                if (calendarStatuses[dateKey]) {
-                    dayDiv.classList.add(calendarStatuses[dateKey]);
-                }
-
-                dayDiv.addEventListener('click', () => {
-                    if (dayDiv.classList.contains('work')) {
-                        dayDiv.classList.remove('work');
-                        dayDiv.classList.add('off');
-                        calendarStatuses[dateKey] = 'off';
-                    } else if (dayDiv.classList.contains('off')) {
-                        dayDiv.classList.remove('off');
-                        delete calendarStatuses[dateKey];
-                    } else {
-                        dayDiv.classList.add('work');
-                        calendarStatuses[dateKey] = 'work';
-                    }
-                    localStorage.setItem('calendar_statuses', JSON.stringify(calendarStatuses));
-                });
-
-                grid.appendChild(dayDiv);
-            }
-        }
-
-        // Сохранение смены
         document.getElementById('send-btn').addEventListener('click', () => {
             const incomeInput = document.getElementById('income');
             const fuelInput = document.getElementById('fuel');
+            
             const income = parseFloat(incomeInput.value);
             const fuel = parseFloat(fuelInput.value);
 
@@ -557,34 +61,19 @@
                 return;
             }
 
-            const profit = income - fuel;
-            const now = new Date();
-            const todayStr = now.toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'});
+            // Формируем строку данных для Make (через пробел)
+            const data = `${income} ${fuel}`;
+
+            // Отправляем данные в Telegram-бот
+            tg.sendData(data);
             
-            const dateKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-            calendarStatuses[dateKey] = 'work';
-            localStorage.setItem('calendar_statuses', JSON.stringify(calendarStatuses));
-
-            historyData.push({ date: todayStr, income: income, fuel: fuel, profit: profit });
-            localStorage.setItem('shift_history', JSON.stringify(historyData));
-
-            updateUI();
+            alert("Данные отправлены в таблицу!");
             
-            incomeInput.value = '';
-            fuelInput.value = '';
-
-          tg.sendData(data);
-    alert("Данные отправлены в таблицу!");
-    
-    // Вместо закрытия принудительно обновляем страницу через полсекунды
-    setTimeout(function() {
-        location.reload();
-    }, 500);
-});
-
-localStorage.clear();
-console.log("Память приложения успешно очищена!");
-        updateUI();
+            // Перезагружаем страницу через полсекунды, чтобы обновить интерфейс
+            setTimeout(function() {
+                location.reload();
+            }, 500);
+        });
     </script>
 </body>
 </html>

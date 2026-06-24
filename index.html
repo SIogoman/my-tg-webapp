@@ -3,52 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет смен</title>
+    <title>Учет Смен & Доходов</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --bg-color: #141414;
+            --card-bg: #1f1f1f;
+            --text-color: #ffffff;
+            --text-muted: #b3b3b3;
+            --accent-color: #0088cc;
+            --success-color: #2ec4b6;
+            --danger-color: #e71d36;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        h2, h3 {
+            margin: 0 0 12px 0;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 12px;
             text-align: center;
         }
-        input, button {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border: none;
-            font-size: 16px;
+
+        .stat-box .value {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 4px;
         }
+
+        .progress-container {
+            margin-top: 8px;
+        }
+
+        .progress-bar {
+            background-color: rgba(255, 255, 255, 0.1);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, var(--accent-color), var(--success-color));
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
         input {
-            background-color: #333;
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0;
+            background-color: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
             color: #fff;
+            font-size: 16px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
         }
+
+        input:focus {
+            border-color: var(--accent-color);
+        }
+
         button {
-            background-color: #0088cc;
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent-color), #006699);
             color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
+            margin-top: 8px;
+            box-shadow: 0 4px 20px rgba(0, 136, 204, 0.3);
         }
-        button:hover {
-            background-color: #006699;
+
+        button:active {
+            transform: scale(0.98);
         }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        .history-table th, .history-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .history-table th {
+            color: var(--text-muted);
+            font-weight: normal;
+        }
+
+        .profit-plus { color: var(--success-color); }
     </style>
 </head>
 <body>
 
-    <h2>Учет доходов</h2>
-    
-    <input type="number" id="income" placeholder="Грязный доход">
-    <input type="number" id="fuel" placeholder="Заправка">
-    
-    <button id="send-btn">Сохранить смену</button>
+    <div class="card">
+        <h3>Цель на месяц</h3>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div style="font-size: 12px; color: var(--text-muted);">Чистыми</div>
+                <div class="value" id="total-profit">0 ₴</div>
+            </div>
+            <div class="stat-box">
+                <div style="font-size: 12px; color: var(--text-muted);">Осталось</div>
+                <div class="value" id="left-to-goal">50 000 ₴</div>
+            </div>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="goal-progress"></div>
+            </div>
+            <div class="progress-text">
+                <span id="progress-percent">0%</span>
+                <span>Цель: 50 000 ₴</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Внести смену</h3>
+        <input type="number" id="income" placeholder="Грязный доход (₴)" inputmode="numeric">
+        <input type="number" id="fuel" placeholder="Заправка (₴)" inputmode="numeric">
+        <button id="send-btn">Сохранить смену</button>
+    </div>
+
+    <div class="card">
+        <h3>Последние смены</h3>
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Доход</th>
+                    <th>Топливо</th>
+                    <th>Чистыми</th>
+                </tr>
+            </thead>
+            <tbody id="history-rows">
+                </tbody>
+        </table>
+    </div>
 
     <script>
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
+        tg.expand();
 
+        const GOAL = 50000;
+
+        // Загрузка данных из локальной памяти
+        let historyData = JSON.parse(localStorage.getItem('shift_history')) || [];
+
+        function updateUI() {
+            const tbody = document.getElementById('history-rows');
+            tbody.innerHTML = '';
+            
+            let totalProfit = 0;
+
+            // Выводим последние 5 смен
+            historyData.slice().reverse().slice(0, 5).forEach(shift => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${shift.date}</td>
+                    <td>${shift.income} ₴</td>
+                    <td>${shift.fuel} ₴</td>
+                    <td class="profit-plus">+${shift.profit} ₴</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Считаем общую чистую прибыль
+            historyData.forEach(shift => {
+                totalProfit += shift.profit;
+            });
+
+            // Обновляем карточку цели
+            document.getElementById('total-profit').innerText = totalProfit.toLocaleString() + ' ₴';
+            
+            let left = GOAL - totalProfit;
+            document.getElementById('left-to-goal').innerText = (left > 0 ? left.toLocaleString() : 0) + ' ₴';
+
+            let percent = Math.min((totalProfit / GOAL) * 100, 100);
+            document.getElementById('goal-progress').style.width = percent + '%';
+            document.getElementById('progress-percent').innerText = Math.round(percent) + '%';
+        }
+
+        // Клик по кнопке сохранения
         document.getElementById('send-btn').addEventListener('click', () => {
             const incomeInput = document.getElementById('income');
             const fuelInput = document.getElementById('fuel');
@@ -57,23 +242,14 @@
             const fuel = parseFloat(fuelInput.value);
 
             if (isNaN(income) || isNaN(fuel)) {
-                alert('Заполните поля корректными числами!');
+                alert('Заполните все поля цифрами!');
                 return;
             }
 
-            // Формируем строку данных для Make (через пробел)
-            const data = `${income} ${fuel}`;
+            const profit = income - fuel;
+            const now = new Date();
+            const todayStr = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 
-            // Отправляем данные в Telegram-бот
-            tg.sendData(data);
-            
-            alert("Данные отправлены в таблицу!");
-            
-            // Перезагружаем страницу через полсекунды, чтобы обновить интерфейс
-            setTimeout(function() {
-                location.reload();
-            }, 500);
-        });
-    </script>
-</body>
-</html>
+            // Сохраняем в локальную историю на экране
+            historyData.push({ date: todayStr, income: income, fuel: fuel, profit: profit });
+            localStorage.setItem('shift_history', JSON.stringify(historyData));

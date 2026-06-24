@@ -573,10 +573,17 @@
             incomeInput.value = '';
             fuelInput.value = '';
 
-            tg.sendData(data);
-alert("Данные отправлены в таблицу!"); 
-        });
+          tg.sendData(data);
+    alert("Данные отправлены в таблицу!");
+    
+    // Вместо закрытия принудительно обновляем страницу через полсекунды
+    setTimeout(function() {
+        location.reload();
+    }, 500);
+});
 
+localStorage.clear();
+console.log("Память приложения успешно очищена!");
         updateUI();
     </script>
 </body>

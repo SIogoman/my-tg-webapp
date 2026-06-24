@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет смен с календарем</title>
+    <title>Учет смен и Финансов</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -13,6 +13,7 @@
             --text-muted: #b3b3b3;
             --accent-color: #0088cc;
             --success-color: #2ec4b6;
+            --danger-color: #e71d36;
         }
 
         body {
@@ -20,10 +21,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+            padding: 16px 16px 80px 16px; /* Отступ снизу под меню */
         }
 
         .card {
@@ -31,6 +29,7 @@
             border-radius: 16px;
             padding: 16px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            margin-bottom: 16px;
         }
 
         h3 { margin: 0 0 12px 0; font-weight: 600; font-size: 16px; }
@@ -48,35 +47,24 @@
             color: var(--accent-color);
             font-size: 14px;
             cursor: pointer;
-            padding: 0;
-            width: auto;
-            margin: 0;
         }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+        /* Ползунки / Прогресс-бары */
+        .progress-section {
+            margin-bottom: 16px;
         }
-
-        .stat-box {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 12px;
-            border-radius: 12px;
-            text-align: center;
+        .progress-section:last-child { margin-bottom: 0; }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 6px;
         }
-
-        .stat-box .value {
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 4px;
-        }
-
-        .progress-container { margin-top: 12px; }
         .progress-bar {
             background-color: rgba(255, 255, 255, 0.1);
-            height: 8px;
-            border-radius: 4px;
+            height: 10px;
+            border-radius: 5px;
             overflow: hidden;
         }
         .progress-fill {
@@ -85,38 +73,8 @@
             width: 0%;
             transition: width 0.3s;
         }
-        .progress-text {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
 
-        /* Стили календаря */
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 6px;
-            text-align: center;
-            font-size: 12px;
-        }
-        .calendar-day-name { color: var(--text-muted); font-weight: bold; padding-bottom: 4px; }
-        .calendar-day {
-            aspect-ratio: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 8px;
-        }
-        .calendar-day.work {
-            background-color: rgba(46, 196, 182, 0.2);
-            border: 1px solid var(--success-color);
-            color: var(--success-color);
-            font-weight: bold;
-        }
-
+        /* Инпуты и Кнопки */
         input {
             width: 100%;
             padding: 14px;
@@ -142,9 +100,9 @@
             font-weight: bold;
             cursor: pointer;
             margin-top: 8px;
-            box-shadow: 0 4px 20px rgba(0, 136, 204, 0.3);
         }
 
+        /* Таблица */
         .history-table {
             width: 100%;
             border-collapse: collapse;
@@ -153,79 +111,206 @@
         .history-table th, .history-table td {
             padding: 10px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: left;
         }
-        .history-table th { color: var(--text-muted); text-align: left; font-weight: normal; }
+        .history-table th { color: var(--text-muted); font-weight: normal; }
         .profit-plus { color: var(--success-color); font-weight: 500; }
+
+        /* Нижняя навигация */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 65px;
+            background-color: var(--card-bg);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            background: none;
+            border: none;
+            padding: 5px;
+        }
+        .nav-item.active {
+            color: var(--accent-color);
+        }
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 2px;
+        }
+
+        /* Вкладки */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Календарь */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+        .calendar-day-name { color: var(--text-muted); font-size: 12px; font-weight: bold; padding-bottom: 4px; }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .calendar-day.work {
+            background-color: rgba(46, 196, 182, 0.15);
+            border-color: var(--success-color);
+            color: var(--success-color);
+            font-weight: bold;
+        }
+        .calendar-day.off {
+            background-color: rgba(231, 29, 54, 0.15);
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+        }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div class="goal-header">
-            <h3>Цель на месяц</h3>
-            <button class="edit-btn" id="edit-goal-btn">Изменить цель</button>
+    <!-- ВКЛАДКА 1: ВВОД -->
+    <div id="tab-input" class="tab-content active">
+        <!-- Секция Прогресса (Ползунки) -->
+        <div class="card">
+            <!-- Ползунок 1: За 30 дней -->
+            <div class="progress-section">
+                <div class="progress-label">
+                    <span>Заработано за 30 дней</span>
+                    <span id="days30-val" style="font-weight: bold;">0 ₴</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="days30-progress"></div>
+                </div>
+            </div>
+
+            <!-- Ползунок 2: Главная Цель -->
+            <div class="progress-section" style="margin-top: 16px;">
+                <div class="progress-label">
+                    <span id="goal-label-text">Цель на месяц</span>
+                    <span id="goal-val" style="font-weight: bold;">0 / 50 000 ₴</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="main-goal-progress"></div>
+                </div>
+                <div style="text-align: right; margin-top: 6px;">
+                    <button class="edit-btn" id="edit-goal-btn">Изменить цель</button>
+                </div>
+            </div>
         </div>
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div style="font-size: 12px; color: var(--text-muted);">Чистыми</div>
-                <div class="value" id="total-profit">0 ₴</div>
-            </div>
-            <div class="stat-box">
-                <div style="font-size: 12px; color: var(--text-muted);">Осталось</div>
-                <div class="value" id="left-to-goal">0 ₴</div>
-            </div>
+
+        <!-- Форма ввода смены -->
+        <div class="card">
+            <h3>Внести смену</h3>
+            <input type="number" id="income" placeholder="Грязный доход (₴)" inputmode="numeric">
+            <input type="number" id="fuel" placeholder="Заправка (₴)" inputmode="numeric">
+            <button class="main-btn" id="send-btn">Сохранить смену</button>
         </div>
-        <div class="progress-container">
-            <div class="progress-bar">
-                <div class="progress-fill" id="goal-progress"></div>
-            </div>
-            <div class="progress-text">
-                <span id="progress-percent">0%</span>
-                <span id="goal-text">Цель: 50 000 ₴</span>
-            </div>
+
+        <!-- Последние смены -->
+        <div class="card">
+            <h3>Последние смены</h3>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Доход</th>
+                        <th>Топливо</th>
+                        <th>Чистыми</th>
+                    </tr>
+                </thead>
+                <tbody id="history-rows-short"></tbody>
+            </table>
         </div>
     </div>
 
-    <div class="card">
-        <h3 id="calendar-month-title">Календарь смен</h3>
-        <div class="calendar-grid" id="calendar-days-container">
-            </div>
+    <!-- ВКЛАДКА 2: КАЛЕНДАРЬ -->
+    <div id="tab-calendar" class="tab-content">
+        <div class="card">
+            <h3 id="calendar-month-title">Календарь</h3>
+            <div class="calendar-grid" id="calendar-container"></div>
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 0 10px;">
+            * Нажми на день в календаре, чтобы переключить его статус: Рабочий 🟢 / Выходной 🔴 / Сбросить ⚪
+        </div>
     </div>
 
-    <div class="card">
-        <h3>Внести смену</h3>
-        <input type="number" id="income" placeholder="Грязный доход (₴)" inputmode="numeric">
-        <input type="number" id="fuel" placeholder="Заправка (₴)" inputmode="numeric">
-        <button class="main-btn" id="send-btn">Сохранить смену</button>
+    <!-- ВКЛАДКА 3: ИСТОРИЯ -->
+    <div id="tab-history" class="tab-content">
+        <div class="card">
+            <h3>Полная история смен</h3>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Доход</th>
+                        <th>Топливо</th>
+                        <th>Чистыми</th>
+                    </tr>
+                </thead>
+                <tbody id="history-rows-full"></tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="card">
-        <h3>Последние смены</h3>
-        <table class="history-table">
-            <thead>
-                <tr>
-                    <th>Дата</th>
-                    <th>Доход</th>
-                    <th>Топливо</th>
-                    <th>Чистыми</th>
-                </tr>
-            </thead>
-            <tbody id="history-rows"></tbody>
-        </table>
+    <!-- НИЖНЕЕ МЕНЮ (НАВИГАЦИЯ) -->
+    <div class="bottom-nav">
+        <button class="nav-item active" onclick="switchTab('tab-input', this)">
+            <div class="nav-icon">📥</div>
+            <div>Ввод</div>
+        </button>
+        <button class="nav-item" onclick="switchTab('tab-calendar', this)">
+            <div class="nav-icon">📅</div>
+            <div>Календарь смен</div>
+        </button>
+        <button class="nav-item" onclick="switchTab('tab-history', this)">
+            <div class="nav-icon">📜</div>
+            <div>История</div>
+        </button>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Загрузка настроек и данных
+        // Базы данных
         let currentGoal = parseFloat(localStorage.getItem('user_monthly_goal')) || 50000;
         let historyData = JSON.parse(localStorage.getItem('shift_history')) || [];
         let calendarStatuses = JSON.parse(localStorage.getItem('calendar_statuses')) || {};
 
-        // Изменение цели по кнопке
+        // Функция переключения вкладок
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            el.classList.add('active');
+            
+            if(tabId === 'tab-calendar') { renderCalendar(); }
+        }
+
+        // Изменение главной цели
         document.getElementById('edit-goal-btn').addEventListener('click', () => {
-            let newGoal = prompt("Введи новую цель на месяц (₴):", currentGoal);
+            let newGoal = prompt("Введи сумму цели на месяц (₴):", currentGoal);
             if (newGoal && !isNaN(newGoal)) {
                 currentGoal = parseFloat(newGoal);
                 localStorage.setItem('user_monthly_goal', currentGoal);
@@ -233,8 +318,9 @@
             }
         });
 
+        // Генерация и интерактив календаря
         function renderCalendar() {
-            const container = document.getElementById('calendar-days-container');
+            const container = document.getElementById('calendar-container');
             container.innerHTML = '';
 
             const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -257,8 +343,7 @@
             const totalDays = new Date(year, month + 1, 0).getDate();
 
             for (let i = 0; i < shiftDayIndex; i++) {
-                const emptyDiv = document.createElement('div');
-                container.appendChild(emptyDiv);
+                container.appendChild(document.createElement('div'));
             }
 
             for (let day = 1; day <= totalDays; day++) {
@@ -267,45 +352,84 @@
                 dayDiv.innerText = day;
 
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                if (calendarStatuses[dateKey] === 'work') {
-                    dayDiv.classList.add('work');
-                }
+                
+                if (calendarStatuses[dateKey] === 'work') dayDiv.classList.add('work');
+                else if (calendarStatuses[dateKey] === 'off') dayDiv.classList.add('off');
+
+                // Клик по дню меняет статус по кругу
+                dayDiv.addEventListener('click', () => {
+                    if (!calendarStatuses[dateKey]) {
+                        calendarStatuses[dateKey] = 'work';
+                    } else if (calendarStatuses[dateKey] === 'work') {
+                        calendarStatuses[dateKey] = 'off';
+                    } else {
+                        delete calendarStatuses[dateKey];
+                    }
+                    localStorage.setItem('calendar_statuses', JSON.stringify(calendarStatuses));
+                    renderCalendar();
+                });
 
                 container.appendChild(dayDiv);
             }
         }
 
+        // Обновление интерфейса и расчет ползунков
         function updateUI() {
-            document.getElementById('goal-text').innerText = `Цель: ${currentGoal.toLocaleString()} ₴`;
-            
-            const tbody = document.getElementById('history-rows');
-            tbody.innerHTML = '';
             let totalProfit = 0;
+            let profit30Days = 0;
+            const now = new Date();
+            const thirtyDaysAgo = new Date().setDate(now.getDate() - 30);
 
-            historyData.slice().reverse().slice(0, 5).forEach(shift => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
+            // Очистка таблиц
+            const shortTbody = document.getElementById('history-rows-short');
+            const fullTbody = document.getElementById('history-rows-full');
+            shortTbody.innerHTML = '';
+            fullTbody.innerHTML = '';
+
+            // Заполнение списков истории
+            historyData.slice().reverse().forEach((shift, index) => {
+                const rowHTML = `
                     <td>${shift.date}</td>
                     <td>${shift.income} ₴</td>
                     <td>${shift.fuel} ₴</td>
                     <td class="profit-plus">+${shift.profit} ₴</td>
                 `;
-                tbody.appendChild(row);
+                
+                // В полную историю пишем всё
+                const rowFull = document.createElement('tr');
+                rowFull.innerHTML = rowHTML;
+                fullTbody.appendChild(rowFull);
+
+                // На главный экран выводим только последние 3
+                if(index < 3) {
+                    const rowShort = document.createElement('tr');
+                    rowShort.innerHTML = rowHTML;
+                    shortTbody.appendChild(rowShort);
+                }
+
+                // Считаем общую прибыль
+                totalProfit += shift.profit;
+
+                // Считаем прибыль строго за последние 30 дней
+                if (shift.timestamp && shift.timestamp >= thirtyDaysAgo) {
+                    profit30Days += shift.profit;
+                }
             });
 
-            historyData.forEach(shift => { totalProfit += shift.profit; });
+            // Корректировка ползунка за 30 дней (базовая планка отображения пусть будет 40 000)
+            document.getElementById('days30-val').innerText = profit30Days.toLocaleString() + ' ₴';
+            let percent30 = Math.min((profit30Days / 40000) * 100, 100);
+            document.getElementById('days30-progress').style.width = percent30 + '%';
 
-            document.getElementById('total-profit').innerText = totalProfit.toLocaleString() + ' ₴';
-            let left = currentGoal - totalProfit;
-            document.getElementById('left-to-goal').innerText = (left > 0 ? left.toLocaleString() : 0) + ' ₴';
-
-            let percent = Math.min((totalProfit / currentGoal) * 100, 100);
-            document.getElementById('goal-progress').style.width = percent + '%';
-            document.getElementById('progress-percent').innerText = Math.round(percent) + '%';
+            // Корректировка ползунка Главной Цели
+            document.getElementById('goal-val').innerText = `${totalProfit.toLocaleString()} / ${currentGoal.toLocaleString()} ₴`;
+            let percentGoal = Math.min((totalProfit / currentGoal) * 100, 100);
+            document.getElementById('main-goal-progress').style.width = percentGoal + '%';
 
             renderCalendar();
         }
 
+        // Сохранение смены
         document.getElementById('send-btn').addEventListener('click', () => {
             const incomeInput = document.getElementById('income');
             const fuelInput = document.getElementById('fuel');
@@ -314,7 +438,7 @@
             const fuel = parseFloat(fuelInput.value);
 
             if (isNaN(income) || isNaN(fuel)) {
-                alert('Заполните поля корректными числами!');
+                alert('Введите корректные числа!');
                 return;
             }
 
@@ -322,26 +446,32 @@
             const now = new Date();
             const todayStr = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 
-            // Отмечаем день в календаре
+            // Автоматом красим сегодняшний день рабочим в календаре
             const dateKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             calendarStatuses[dateKey] = 'work';
             localStorage.setItem('calendar_statuses', JSON.stringify(calendarStatuses));
 
-            // Сохраняем в историю
-            historyData.push({ date: todayStr, income: income, fuel: fuel, profit: profit });
+            // Сохраняем смену в историю
+            historyData.push({ 
+                date: todayStr, 
+                income: income, 
+                fuel: fuel, 
+                profit: profit,
+                timestamp: now.getTime() 
+            });
             localStorage.setItem('shift_history', JSON.stringify(historyData));
 
             updateUI();
 
-            // Передача в Make
-            const data = `${income} ${fuel}`;
-            tg.sendData(data);
+            // Передаем данные в Make
+            tg.sendData(`${income} ${fuel}`);
             
-            alert("Смена записана!");
+            alert("Смена успешно сохранена!");
             incomeInput.value = '';
             fuelInput.value = '';
         });
 
+        // Инициализация при старте
         updateUI();
     </script>
 </body>

@@ -266,4 +266,83 @@
                 dayDiv.className = 'calendar-day';
                 dayDiv.innerText = day;
 
-                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                if (calendarStatuses[dateKey] === 'work') {
+                    dayDiv.classList.add('work');
+                }
+
+                container.appendChild(dayDiv);
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('goal-text').innerText = `Цель: ${currentGoal.toLocaleString()} ₴`;
+            
+            const tbody = document.getElementById('history-rows');
+            tbody.innerHTML = '';
+            let totalProfit = 0;
+
+            historyData.slice().reverse().slice(0, 5).forEach(shift => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${shift.date}</td>
+                    <td>${shift.income} ₴</td>
+                    <td>${shift.fuel} ₴</td>
+                    <td class="profit-plus">+${shift.profit} ₴</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            historyData.forEach(shift => { totalProfit += shift.profit; });
+
+            document.getElementById('total-profit').innerText = totalProfit.toLocaleString() + ' ₴';
+            let left = currentGoal - totalProfit;
+            document.getElementById('left-to-goal').innerText = (left > 0 ? left.toLocaleString() : 0) + ' ₴';
+
+            let percent = Math.min((totalProfit / currentGoal) * 100, 100);
+            document.getElementById('goal-progress').style.width = percent + '%';
+            document.getElementById('progress-percent').innerText = Math.round(percent) + '%';
+
+            renderCalendar();
+        }
+
+        document.getElementById('send-btn').addEventListener('click', () => {
+            const incomeInput = document.getElementById('income');
+            const fuelInput = document.getElementById('fuel');
+            
+            const income = parseFloat(incomeInput.value);
+            const fuel = parseFloat(fuelInput.value);
+
+            if (isNaN(income) || isNaN(fuel)) {
+                alert('Заполните поля корректными числами!');
+                return;
+            }
+
+            const profit = income - fuel;
+            const now = new Date();
+            const todayStr = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+
+            // Отмечаем день в календаре
+            const dateKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            calendarStatuses[dateKey] = 'work';
+            localStorage.setItem('calendar_statuses', JSON.stringify(calendarStatuses));
+
+            // Сохраняем в историю
+            historyData.push({ date: todayStr, income: income, fuel: fuel, profit: profit });
+            localStorage.setItem('shift_history', JSON.stringify(historyData));
+
+            updateUI();
+
+            // Передача в Make
+            const data = `${income} ${fuel}`;
+            tg.sendData(data);
+            
+            alert("Смена записана!");
+            incomeInput.value = '';
+            fuelInput.value = '';
+        });
+
+        updateUI();
+    </script>
+</body>
+</html>

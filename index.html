@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Учет Смен & Доходов</title>
+    <title>Учет смен с календарем</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -13,11 +13,10 @@
             --text-muted: #b3b3b3;
             --accent-color: #0088cc;
             --success-color: #2ec4b6;
-            --danger-color: #e71d36;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
@@ -34,16 +33,30 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
-        h2, h3 {
-            margin: 0 0 12px 0;
-            font-weight: 600;
+        h3 { margin: 0 0 12px 0; font-weight: 600; font-size: 16px; }
+
+        .goal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .edit-btn {
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 0;
+            width: auto;
+            margin: 0;
         }
 
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 12px;
-            margin-bottom: 8px;
         }
 
         .stat-box {
@@ -59,30 +72,49 @@
             margin-top: 4px;
         }
 
-        .progress-container {
-            margin-top: 8px;
-        }
-
+        .progress-container { margin-top: 12px; }
         .progress-bar {
             background-color: rgba(255, 255, 255, 0.1);
             height: 8px;
             border-radius: 4px;
             overflow: hidden;
         }
-
         .progress-fill {
             background: linear-gradient(90deg, var(--accent-color), var(--success-color));
             height: 100%;
             width: 0%;
             transition: width 0.3s;
         }
-
         .progress-text {
             display: flex;
             justify-content: space-between;
             font-size: 12px;
             color: var(--text-muted);
             margin-top: 4px;
+        }
+
+        /* Стили календаря */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .calendar-day-name { color: var(--text-muted); font-weight: bold; padding-bottom: 4px; }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
+        .calendar-day.work {
+            background-color: rgba(46, 196, 182, 0.2);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+            font-weight: bold;
         }
 
         input {
@@ -96,14 +128,10 @@
             font-size: 16px;
             box-sizing: border-box;
             outline: none;
-            transition: border-color 0.2s;
         }
+        input:focus { border-color: var(--accent-color); }
 
-        input:focus {
-            border-color: var(--accent-color);
-        }
-
-        button {
+        button.main-btn {
             width: 100%;
             padding: 14px;
             background: linear-gradient(135deg, var(--accent-color), #006699);
@@ -117,35 +145,26 @@
             box-shadow: 0 4px 20px rgba(0, 136, 204, 0.3);
         }
 
-        button:active {
-            transform: scale(0.98);
-        }
-
         .history-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px;
             font-size: 14px;
         }
-
         .history-table th, .history-table td {
             padding: 10px;
-            text-align: left;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-
-        .history-table th {
-            color: var(--text-muted);
-            font-weight: normal;
-        }
-
-        .profit-plus { color: var(--success-color); }
+        .history-table th { color: var(--text-muted); text-align: left; font-weight: normal; }
+        .profit-plus { color: var(--success-color); font-weight: 500; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h3>Цель на месяц</h3>
+        <div class="goal-header">
+            <h3>Цель на месяц</h3>
+            <button class="edit-btn" id="edit-goal-btn">Изменить цель</button>
+        </div>
         <div class="stats-grid">
             <div class="stat-box">
                 <div style="font-size: 12px; color: var(--text-muted);">Чистыми</div>
@@ -153,7 +172,7 @@
             </div>
             <div class="stat-box">
                 <div style="font-size: 12px; color: var(--text-muted);">Осталось</div>
-                <div class="value" id="left-to-goal">50 000 ₴</div>
+                <div class="value" id="left-to-goal">0 ₴</div>
             </div>
         </div>
         <div class="progress-container">
@@ -162,16 +181,22 @@
             </div>
             <div class="progress-text">
                 <span id="progress-percent">0%</span>
-                <span>Цель: 50 000 ₴</span>
+                <span id="goal-text">Цель: 50 000 ₴</span>
             </div>
         </div>
+    </div>
+
+    <div class="card">
+        <h3 id="calendar-month-title">Календарь смен</h3>
+        <div class="calendar-grid" id="calendar-days-container">
+            </div>
     </div>
 
     <div class="card">
         <h3>Внести смену</h3>
         <input type="number" id="income" placeholder="Грязный доход (₴)" inputmode="numeric">
         <input type="number" id="fuel" placeholder="Заправка (₴)" inputmode="numeric">
-        <button id="send-btn">Сохранить смену</button>
+        <button class="main-btn" id="send-btn">Сохранить смену</button>
     </div>
 
     <div class="card">
@@ -185,8 +210,7 @@
                     <th>Чистыми</th>
                 </tr>
             </thead>
-            <tbody id="history-rows">
-                </tbody>
+            <tbody id="history-rows"></tbody>
         </table>
     </div>
 
@@ -194,62 +218,52 @@
         let tg = window.Telegram.WebApp;
         tg.expand();
 
-        const GOAL = 50000;
-
-        // Загрузка данных из локальной памяти
+        // Загрузка настроек и данных
+        let currentGoal = parseFloat(localStorage.getItem('user_monthly_goal')) || 50000;
         let historyData = JSON.parse(localStorage.getItem('shift_history')) || [];
+        let calendarStatuses = JSON.parse(localStorage.getItem('calendar_statuses')) || {};
 
-        function updateUI() {
-            const tbody = document.getElementById('history-rows');
-            tbody.innerHTML = '';
-            
-            let totalProfit = 0;
+        // Изменение цели по кнопке
+        document.getElementById('edit-goal-btn').addEventListener('click', () => {
+            let newGoal = prompt("Введи новую цель на месяц (₴):", currentGoal);
+            if (newGoal && !isNaN(newGoal)) {
+                currentGoal = parseFloat(newGoal);
+                localStorage.setItem('user_monthly_goal', currentGoal);
+                updateUI();
+            }
+        });
 
-            // Выводим последние 5 смен
-            historyData.slice().reverse().slice(0, 5).forEach(shift => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${shift.date}</td>
-                    <td>${shift.income} ₴</td>
-                    <td>${shift.fuel} ₴</td>
-                    <td class="profit-plus">+${shift.profit} ₴</td>
-                `;
-                tbody.appendChild(row);
+        function renderCalendar() {
+            const container = document.getElementById('calendar-days-container');
+            container.innerHTML = '';
+
+            const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            dayNames.forEach(name => {
+                const div = document.createElement('div');
+                div.className = 'calendar-day-name';
+                div.innerText = name;
+                container.appendChild(div);
             });
 
-            // Считаем общую чистую прибыль
-            historyData.forEach(shift => {
-                totalProfit += shift.profit;
-            });
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
 
-            // Обновляем карточку цели
-            document.getElementById('total-profit').innerText = totalProfit.toLocaleString() + ' ₴';
-            
-            let left = GOAL - totalProfit;
-            document.getElementById('left-to-goal').innerText = (left > 0 ? left.toLocaleString() : 0) + ' ₴';
+            const monthNames = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+            document.getElementById('calendar-month-title').innerText = `${monthNames[month]} ${year}`;
 
-            let percent = Math.min((totalProfit / GOAL) * 100, 100);
-            document.getElementById('goal-progress').style.width = percent + '%';
-            document.getElementById('progress-percent').innerText = Math.round(percent) + '%';
-        }
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const shiftDayIndex = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+            const totalDays = new Date(year, month + 1, 0).getDate();
 
-        // Клик по кнопке сохранения
-        document.getElementById('send-btn').addEventListener('click', () => {
-            const incomeInput = document.getElementById('income');
-            const fuelInput = document.getElementById('fuel');
-            
-            const income = parseFloat(incomeInput.value);
-            const fuel = parseFloat(fuelInput.value);
-
-            if (isNaN(income) || isNaN(fuel)) {
-                alert('Заполните все поля цифрами!');
-                return;
+            for (let i = 0; i < shiftDayIndex; i++) {
+                const emptyDiv = document.createElement('div');
+                container.appendChild(emptyDiv);
             }
 
-            const profit = income - fuel;
-            const now = new Date();
-            const todayStr = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+            for (let day = 1; day <= totalDays; day++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day';
+                dayDiv.innerText = day;
 
-            // Сохраняем в локальную историю на экране
-            historyData.push({ date: todayStr, income: income, fuel: fuel, profit: profit });
-            localStorage.setItem('shift_history', JSON.stringify(historyData));
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0
